@@ -13,4 +13,8 @@ contract MockAccountFactory {
         isAccountValid = _flag;
     }
 
+    function useDefaults() public {
+        isAccountValid = true;
+    }
+
 }

@@ -45,9 +45,10 @@ contract("Kernel", (accounts) => {
     beforeEach(async () => {
         omg = await OMG.new();
         bat = await BAT.new();
+        await accountFactory.useDefaults();
     });
 
-    it("should create loan order and transfer tokens accordingly", async() => {
+    it("should create loan order", async() => {
         let loanValue = web3.toWei(1, "ether"); // omg
         let collValue = web3.toWei(1.5, "ether"); // bat
 
@@ -72,7 +73,7 @@ contract("Kernel", (accounts) => {
             orderValues
         ];
 
-        // kernel, account, wallet, loan, coll, loanValue, collValue, premium, duration, salt, fee
+        // kernel, account, loan, coll, loanValue, collValue, premium, duration, salt, fee
         let dataToSign = [kernel.address, account.address, omg.address, bat.address, loanValue, collValue, premium, duration, salt, fee];
         let result = await helpers.generateAndSignHash(acc1, signTypeMeta["createOrder"], dataToSign);
 
@@ -91,7 +92,7 @@ contract("Kernel", (accounts) => {
         assert.isTrue(diffKernelEscrowCollBal.eq(collValue), "coll erc20 transfer to kernel escrow failed");
     });
     
-    it("should create loan order and repay", async() => {
+    it("should repay loan order", async() => {
         let loanValue = web3.toWei(1, "ether"); // omg
         let collValue = web3.toWei(1.5, "ether"); // bat
 
@@ -130,7 +131,7 @@ contract("Kernel", (accounts) => {
         let premiumValue = preQuotient.div(precision);
         let valueToRepay = web3.toBigNumber(loanValue).plus(premiumValue);
 
-        let dataForRepay = [kernel.address, orderHash, valueToRepay.toString()];
+        let dataForRepay = [kernel.address, orderHash, valueToRepay.toString()];    
         result = await helpers.generateAndSignHash(acc1, signTypeMeta["repay"], dataForRepay);
 
         dataForRepay.shift();
@@ -154,5 +155,128 @@ contract("Kernel", (accounts) => {
         assert.isTrue(diffAccCollBal.eq(collValue), "coll erc20 transfer to account failed");
         assert.isTrue(diffReserveEscrowLoanBal.eq(valueToRepay), "loan erc20 transfer to reserve escrow failed");
     });
+
+    it("should default loan order on expiry", async() => {
+        let loanValue = web3.toWei(1, "ether"); // omg
+        let collValue = web3.toWei(1.5, "ether"); // bat
+
+        let precision = web3.toWei(1, "ether"); // represents 100%
+
+        await omg.transfer(reserveEscrow.address, loanValue);
+        await bat.transfer(account.address, collValue);
+
+        let premium = web3.toWei(0.08, "ether"); // 8%
+        let duration = 86400; // 1 day
+        let salt = helpers.generateRandomNumber();
+        let fee = 0;
+
+        // account, wallet, loan, coll
+        let orderAddr = [account.address, acc1, omg.address, bat.address];
+        // loanValue, collValue, premium, duration, salt, fee
+        let orderValues = [loanValue, collValue, premium, duration, salt, fee];
+
+        let dataForCall = [
+            orderAddr,
+            orderValues
+        ];
+
+        // kernel, account, loan, coll, loanValue, collValue, premium, duration, salt, fee
+        let dataToSign = [kernel.address, account.address, omg.address, bat.address, loanValue, collValue, premium, duration, salt, fee];
+        let result = await helpers.generateAndSignHash(acc1, signTypeMeta["createOrder"], dataToSign);
+
+        dataForCall.push(result.sign);
+
+        await kernel.createOrder(...dataForCall);
+        let orderHash = result.hash;
+
+        assert.isFalse(await kernel.isRepaid(orderHash), "order already repaid");
+        assert.isFalse(await kernel.isDefaulted(orderHash), "order already defaulted");
+        
+        // prepping exchange conn 
+        await exchangeConnector.setPairRate(bat.address, omg.address, web3.toWei(1, "ether")); // rate omg/bat = 1 
+        await omg.transfer(exchangeConnector.address, web3.toWei(1.08, "ether"));
+
+        // prepping for expiry
+        await helpers.increaseGanacheBlockTime(2 * 86400); // 2 days
+
+        // prep to allow reserve.lock from escrow
+        await accountFactory.setAccountValidity(false);
+
+        let initReserveEscrowLoanBal = await omg.balanceOf(reserveEscrow.address);
+        let initAccountCollBal = await bat.balanceOf(account.address);
+
+        await kernel.process(orderHash, 0); // price don't matter, as checking for expiry
+
+        let finalReserveEscrowLoanBal = await omg.balanceOf(reserveEscrow.address);
+        let finalAccountCollBal = await bat.balanceOf(account.address);
+
+        let diffReserveEscrowLoanBal = finalReserveEscrowLoanBal.minus(initReserveEscrowLoanBal);
+        let diffAccCollBal = finalAccountCollBal.minus(initAccountCollBal);
+        
+        assert.isTrue(await kernel.isDefaulted(orderHash), "order not defaulted");
+        assert.isTrue(diffAccCollBal.eq(web3.toWei(0.42, "ether")), "coll erc20 transfer to account failed");
+        assert.isTrue(diffReserveEscrowLoanBal.eq(web3.toWei(1.08, "ether")), "loan erc20 transfer to reserve escrow failed");
+    });
+
+    it("should default loan order on collateral unsafe", async() => {
+        let loanValue = web3.toWei(1, "ether"); // omg
+        let collValue = web3.toWei(1.5, "ether"); // bat
+
+        let precision = web3.toWei(1, "ether"); // represents 100%
+
+        await omg.transfer(reserveEscrow.address, loanValue);
+        await bat.transfer(account.address, collValue);
+
+        let premium = web3.toWei(0.08, "ether"); // 8%
+        let duration = 86400; // 1 day
+        let salt = helpers.generateRandomNumber();
+        let fee = 0;
+
+        // account, wallet, loan, coll
+        let orderAddr = [account.address, acc1, omg.address, bat.address];
+        // loanValue, collValue, premium, duration, salt, fee
+        let orderValues = [loanValue, collValue, premium, duration, salt, fee];
+
+        let dataForCall = [
+            orderAddr,
+            orderValues
+        ];
+
+        // kernel, account, loan, coll, loanValue, collValue, premium, duration, salt, fee
+        let dataToSign = [kernel.address, account.address, omg.address, bat.address, loanValue, collValue, premium, duration, salt, fee];
+        let result = await helpers.generateAndSignHash(acc1, signTypeMeta["createOrder"], dataToSign);
+
+        dataForCall.push(result.sign);
+
+        await kernel.createOrder(...dataForCall);
+        let orderHash = result.hash;
+
+        assert.isFalse(await kernel.isRepaid(orderHash), "order already repaid");
+        assert.isFalse(await kernel.isDefaulted(orderHash), "order already defaulted");
+        
+        // prepping exchange conn 
+        let rate = web3.toWei(0.5, "ether");
+        await exchangeConnector.setPairRate(bat.address, omg.address, rate); // rate omg/bat = 0.5
+        await omg.transfer(exchangeConnector.address, web3.toWei(0.75, "ether"));
+
+        // prep to allow reserve.lock from escrow
+        await accountFactory.setAccountValidity(false);
+
+        let initReserveEscrowLoanBal = await omg.balanceOf(reserveEscrow.address);
+        let initAccountCollBal = await bat.balanceOf(account.address);
+
+        await kernel.process(orderHash, rate);
+
+        let finalReserveEscrowLoanBal = await omg.balanceOf(reserveEscrow.address);
+        let finalAccountCollBal = await bat.balanceOf(account.address);
+
+        let diffReserveEscrowLoanBal = finalReserveEscrowLoanBal.minus(initReserveEscrowLoanBal);
+        let diffAccCollBal = finalAccountCollBal.minus(initAccountCollBal);
+        
+        assert.isTrue(await kernel.isDefaulted(orderHash), "order not defaulted");
+        assert.isTrue(diffAccCollBal.eq(web3.toWei(0, "ether")), "coll erc20 transfer to account failed");
+        assert.isTrue(diffReserveEscrowLoanBal.eq(web3.toWei(0.75, "ether")), "loan erc20 transfer to reserve escrow failed");
+    });
+
 
 });

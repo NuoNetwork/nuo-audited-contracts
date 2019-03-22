@@ -93,6 +93,18 @@ let generateRandomNumber = () => {
   return Math.floor(Math.random() * 1000000000 + 1);
 }
 
+let jsonrpc = "2.0";
+let id = 0;
+
+let rpcSend = (method, params = []) => {
+  web3.currentProvider.send({ id, jsonrpc, method, params })
+}
+
+let increaseGanacheBlockTime = async (seconds) => {
+  await rpcSend('evm_increaseTime', [seconds]);
+  await rpcSend('evm_mine');
+}
+
 module.exports = 
 {
     sendEther,
@@ -101,5 +113,6 @@ module.exports =
     generateHash,
     signHash,
     generateAndSignHash,
-    generateRandomNumber
+    generateRandomNumber,
+    increaseGanacheBlockTime
 };
