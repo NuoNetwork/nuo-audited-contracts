@@ -8,11 +8,24 @@ contract MockReserve {
     MockEscrow public escrow;
     MockAccountFactory public accountFactory;
 
+    bool public shouldLockPullFromAccount = true;
+    bool public shouldLockPullFromEscrow = false;
 
     constructor(MockEscrow _escrow, MockAccountFactory _accountFactory) public {
         escrow = _escrow;
         accountFactory = _accountFactory;
     }
+
+    function allowLockPullFromAccount() public {
+        shouldLockPullFromAccount = true;
+        shouldLockPullFromEscrow = false;
+    }
+
+    function allowLockPullFromEscrow() public {
+        shouldLockPullFromAccount = false;
+        shouldLockPullFromEscrow = true;
+    }
+
 
     function release(address _token, address _to, uint _value) 
         public
@@ -23,10 +36,12 @@ contract MockReserve {
     function lock(address _token, address _from, uint _value, uint _profit, uint _loss)
         public
     {               
-        if(accountFactory.isAccount(_from)) {
+        if(shouldLockPullFromAccount) {
             escrow.transferFromAccount(_from, _token, address(escrow), _value);
-        } else {
+        } else if (shouldLockPullFromEscrow) {
             MockEscrow(_from).transfer(_token, address(escrow), _value);
+        } else {
+            revert();
         }
     }
 

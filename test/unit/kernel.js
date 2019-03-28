@@ -45,7 +45,7 @@ contract("Kernel", (accounts) => {
     beforeEach(async () => {
         omg = await OMG.new();
         bat = await BAT.new();
-        await accountFactory.useDefaults();
+        await reserve.allowLockPullFromAccount();
     });
 
     it("should create loan order", async() => {
@@ -197,10 +197,10 @@ contract("Kernel", (accounts) => {
         await omg.transfer(exchangeConnector.address, web3.toWei(1.08, "ether"));
 
         // prepping for expiry
-        await helpers.increaseGanacheBlockTime(2 * 86400); // 2 days
+        await helpers.increaseGanacheBlockTime(86400); // 1 days
 
         // prep to allow reserve.lock from escrow
-        await accountFactory.setAccountValidity(false);
+        await reserve.allowLockPullFromEscrow();
 
         let initReserveEscrowLoanBal = await omg.balanceOf(reserveEscrow.address);
         let initAccountCollBal = await bat.balanceOf(account.address);
@@ -260,7 +260,7 @@ contract("Kernel", (accounts) => {
         await omg.transfer(exchangeConnector.address, web3.toWei(0.75, "ether"));
 
         // prep to allow reserve.lock from escrow
-        await accountFactory.setAccountValidity(false);
+        await reserve.allowLockPullFromEscrow();
 
         let initReserveEscrowLoanBal = await omg.balanceOf(reserveEscrow.address);
         let initAccountCollBal = await bat.balanceOf(account.address);
