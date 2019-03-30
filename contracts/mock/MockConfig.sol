@@ -11,6 +11,7 @@ contract MockConfig  {
         pure
         returns (bool)
     {
+        _admin;
         return true;
     }
 

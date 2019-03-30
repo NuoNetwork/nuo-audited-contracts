@@ -7,6 +7,7 @@ contract MockAccount  {
 
 
     function isUser(address _user) public pure returns (bool) {
+        _user;
         return true;
     }
     

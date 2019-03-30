@@ -46,6 +46,7 @@ contract("Kernel", (accounts) => {
         omg = await OMG.new();
         bat = await BAT.new();
         await reserve.allowLockPullFromAccount();
+        await accountFactory.useDefaults();
     });
 
     it("should create loan order", async() => {
@@ -278,5 +279,44 @@ contract("Kernel", (accounts) => {
         assert.isTrue(diffReserveEscrowLoanBal.eq(web3.toWei(0.75, "ether")), "loan erc20 transfer to reserve escrow failed");
     });
 
+    it("should not create loan order and get error for invalid signer", async() => {
+        let loanValue = web3.toWei(1, "ether"); // omg
+        let collValue = web3.toWei(1.5, "ether"); // bat
+
+        await omg.transfer(reserveEscrow.address, loanValue);
+        await bat.transfer(account.address, collValue);
+
+        let premium = web3.toWei(0.08, "ether"); // 8%
+        let duration = 86400; // 1 day
+        let salt = helpers.generateRandomNumber();
+        let fee = 0;
+
+        // account, wallet, loan, coll
+        let orderAddr = [account.address, acc1, omg.address, bat.address];
+        // loanValue, collValue, premium, duration, salt, fee
+        let orderValues = [loanValue, collValue, premium, duration, salt, fee];
+
+        let dataForCall = [
+            orderAddr,
+            orderValues
+        ];
+
+        // kernel, account, loan, coll, loanValue, collValue, premium, duration, salt, fee
+        let dataToSign = [kernel.address, account.address, omg.address, bat.address, loanValue, collValue, premium, duration, salt, fee];
+        let result = await helpers.generateAndSignHash(acc1, signTypeMeta["createOrder"], dataToSign);
+
+        // invalidating sign
+        result.sign = result.sign.replace("e", "c");
+
+        dataForCall.push(result.sign);
+
+        let tx = await kernel.createOrder(...dataForCall);
+
+        assert.isFalse(await kernel.isOrder(result.hash), "order not available");
+        assert.isTrue(tx.logs[0].event == "LogErrorWithHintBytes32", "event not found");
+        assert.isTrue(tx.logs[0].args.bytes32Value == result.hash, "invalid order hash");
+        assert.isTrue(tx.logs[0].args.methodSig == "Kernel::createOrder", "invalid methodsig");
+        assert.isTrue(tx.logs[0].args.errMsg == "SIGNER_NOT_ORDER_CREATOR", "invalid err msg"); 
+    });
 
 });

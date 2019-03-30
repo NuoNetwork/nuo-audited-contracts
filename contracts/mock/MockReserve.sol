@@ -36,6 +36,9 @@ contract MockReserve {
     function lock(address _token, address _from, uint _value, uint _profit, uint _loss)
         public
     {               
+        _profit;
+        _loss;
+
         if(shouldLockPullFromAccount) {
             escrow.transferFromAccount(_from, _token, address(escrow), _value);
         } else if (shouldLockPullFromEscrow) {
@@ -49,6 +52,8 @@ contract MockReserve {
     function lockSurplus(address _from, address _forToken, address _token, uint _value) 
         public
     {
+        _forToken;
+        
         MockEscrow(_from).transfer(_token, address(escrow), _value);
     }
 

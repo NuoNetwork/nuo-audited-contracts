@@ -174,8 +174,8 @@ contract("Reserve", (accounts) => {
         await helpers.increaseGanacheBlockTime(1 * 86400); // 1 days
 
         // reserve values and order calculations
-        await reserve.updateReserveValues(reserveToken.address, 5);
-        await reserve.updateOrderCumulativeValue(orderHash, 1);
+        await reserve.updateReserveValues(reserveToken.address, 7);
+        await reserve.updateOrderCumulativeValue(orderHash, 2);
 
         let initAccBal = await reserveToken.balanceOf(account.address);
         let initReserveEscrowBal = await reserveToken.balanceOf(reserveEscrow.address);
@@ -198,5 +198,106 @@ contract("Reserve", (accounts) => {
         assert.isTrue(diffAccBal.eq(sumReserveAndProfitValue), "erc20 transfer from account failed");
         assert.isTrue(diffReserveEscrowBal.eq(sumReserveAndProfitValue), "erc20 transfer to reserve escrow failed");
     });
-    
+
+    it("should distribute losses to order", async() => {
+        let reserveValue = web3.toWei(1, "ether"); 
+        let lossValue = web3.toWei(0.8, "ether");
+        let repaidValue = web3.toWei(0.2, "ether");
+        
+        await reserveToken.transfer(account.address, reserveValue);
+
+        let duration = 10 * 86400; // 10 days
+        let salt = helpers.generateRandomNumber();
+
+        // account, reserveToken, byUser
+        let orderAddr = [account.address, reserveToken.address, acc1];
+        // reserveValue, duration, salt
+        let orderValues = [reserveValue, duration, salt];
+
+        let dataForCall = [
+            orderAddr,
+            orderValues
+        ];
+
+        // account, reserveToken, reserveValue, duration, salt
+        let dataToSign = [account.address, reserveToken.address, reserveValue, duration, salt];
+        let result = await helpers.generateAndSignHash(acc1, signTypeMeta["createOrder"], dataToSign);
+
+        dataForCall.push(result.sign);
+
+        await reserve.createOrder(...dataForCall);
+
+        let orderHash = result.hash;
+        
+        // simulating loan issuance and repayment
+        // loan tokens
+        await reserve.release(reserveToken.address, account.address, reserveValue);
+        await helpers.increaseGanacheBlockTime(1 * 86400); // 1 days
+        
+        // loan repaid with loss
+        await reserve.lock(reserveToken.address, account.address, repaidValue, 0, lossValue);
+        await helpers.increaseGanacheBlockTime(1 * 86400); // 1 days
+
+        // reserve values and order calculations
+        await reserve.updateReserveValues(reserveToken.address, 7);
+        await reserve.updateOrderCumulativeValue(orderHash, 2);
+
+        let initAccBal = await reserveToken.balanceOf(account.address);
+        let initReserveEscrowBal = await reserveToken.balanceOf(reserveEscrow.address);
+
+        let dataForCancel = [orderHash, "CANCEL_RESERVE_ORDER"];    
+        result = await helpers.generateAndSignHash(acc1, signTypeMeta["cancelOrder"], dataForCancel); 
+
+        dataForCancel.pop();
+        dataForCancel.push(result.sign);
+       
+        await reserve.cancelOrder(...dataForCancel);
+
+        let finalAccBal = await reserveToken.balanceOf(account.address);
+        let finalReserveEscrowBal = await reserveToken.balanceOf(reserveEscrow.address);
+        
+        let diffAccBal = finalAccBal.minus(initAccBal);
+        let diffReserveEscrowBal = initReserveEscrowBal.minus(finalReserveEscrowBal);
+
+        assert.isTrue(await reserve.cancelledOrders(orderHash), "order not cancelled");
+        assert.isTrue(diffAccBal.eq(repaidValue), "erc20 transfer from account failed");
+        assert.isTrue(diffReserveEscrowBal.eq(repaidValue), "erc20 transfer to reserve escrow failed");
+    });
+
+
+    it("should not create reserve order and get error for invalid signer", async() => {
+        let reserveValue = web3.toWei(1, "ether"); 
+        
+        await reserveToken.transfer(account.address, reserveValue);
+
+        let duration = 86400; // 1 day
+        let salt = helpers.generateRandomNumber();
+
+        // account, reserveToken, byUser
+        let orderAddr = [account.address, reserveToken.address, acc1];
+        // reserveValue, duration, salt
+        let orderValues = [reserveValue, duration, salt];
+
+        let dataForCall = [
+            orderAddr,
+            orderValues
+        ];
+
+        // account, reserveToken, reserveValue, duration, salt
+        let dataToSign = [account.address, reserveToken.address, reserveValue, duration, salt];
+        let result = await helpers.generateAndSignHash(acc1, signTypeMeta["createOrder"], dataToSign);
+
+        // invalidating sign 
+        result.sign = result.sign.replace("e", "c");
+
+        dataForCall.push(result.sign);
+
+        let tx = await reserve.createOrder(...dataForCall);
+
+        assert.isFalse(await reserve.isOrder(result.hash), "order not available");
+        assert.isTrue(tx.logs[0].event == "LogErrorWithHintBytes32", "event not found");
+        assert.isTrue(tx.logs[0].args.bytes32Value == result.hash, "invalid order hash");
+        assert.isTrue(tx.logs[0].args.methodSig == "Reserve::createOrder", "invalid methodsig");
+        assert.isTrue(tx.logs[0].args.errMsg == "SIGNER_NOT_ORDER_CREATOR", "invalid err msg"); 
+    });
 });
