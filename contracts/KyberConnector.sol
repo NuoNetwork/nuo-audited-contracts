@@ -101,7 +101,7 @@ contract KyberConnector is ExchangeConnector, DSThing, Utils {
             _maxDestTokenValue,
             _slippageRate, // no min coversation rate
             feeWallet, 
-            ""
+            new bytes(0)
         );
 
         _srcTokenValueLeft = sub(ERC20(_srcToken).balanceOf(this), initialSrcTokenBalance);
