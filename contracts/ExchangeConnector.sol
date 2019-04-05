@@ -16,7 +16,7 @@ interface ExchangeConnector {
         address _destToken,
         uint _srcTokenValue
     )
-        public
+        external
         returns (uint _destTokenValue, uint _srcTokenValueLeft);
 
     function tradeWithOutputFixed
@@ -27,17 +27,17 @@ interface ExchangeConnector {
         uint _srcTokenValue,
         uint _maxDestTokenValue
     )
-        public
+        external
         returns (uint _destTokenValue, uint _srcTokenValueLeft);
     
 
     function getExpectedRate(address _srcToken, address _destToken, uint _srcTokenValue) 
-        public
+        external
         view
         returns(uint _expectedRate, uint _slippageRate);
     
     function isTradeFeasible(address _srcToken, address _destToken, uint _srcTokenValue) 
-        public
+        external
         view
         returns(bool);
 

@@ -99,9 +99,9 @@ contract KyberConnector is ExchangeConnector, DSThing, Utils {
             ERC20(_destToken),
             this,
             _maxDestTokenValue,
-            _slippageRate, //0, // no min coversation rate
-            feeWallet, // TODO: check if needed
-            ""// bytes(0) // TODO: check if needed // TODO: check zero values for bytes array
+            _slippageRate, // no min coversation rate
+            feeWallet, 
+            ""
         );
 
         _srcTokenValueLeft = sub(ERC20(_srcToken).balanceOf(this), initialSrcTokenBalance);
@@ -123,20 +123,25 @@ contract KyberConnector is ExchangeConnector, DSThing, Utils {
         (_expectedRate, _slippageRate) = kyber.getExpectedRate(ERC20(_srcToken), ERC20(_destToken), _srcTokenValue);
     }
 
+    // making trades always feasible and letting tx fail on platform call
     function isTradeFeasible(address _srcToken, address _destToken, uint _srcTokenValue) 
         public
-        view
+        pure
         returns(bool)
     {
-        uint slippageRate; 
+        // uint slippageRate; 
 
-        (, slippageRate) = getExpectedRate(
-            _srcToken,
-            _destToken,
-            _srcTokenValue
-        );
+        // (, slippageRate) = getExpectedRate(
+        //     _srcToken,
+        //     _destToken,
+        //     _srcTokenValue
+        // );
 
-        return slippageRate == 0 ? false : true;
+        // return slippageRate == 0 ? false : true;
+        _srcToken; 
+        _destToken;
+        _srcTokenValue;
+        return true;
     }
 
     function _transfer

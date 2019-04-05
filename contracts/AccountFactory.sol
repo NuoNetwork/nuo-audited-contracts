@@ -11,8 +11,6 @@ import "./Utils.sol";
  * @author Rohit Soni (rohit@nuofox.com)
  */
 
-// TODO: should disable account?
-
 contract AccountFactory is DSStop, Utils {
     Config public config;
     mapping (address => bool) public isAccount;

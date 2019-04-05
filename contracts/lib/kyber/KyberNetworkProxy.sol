@@ -4,15 +4,15 @@ import "../tokens/ERC20.sol";
 
 interface KyberNetworkProxy {
 
-    function maxGasPrice() public view returns(uint);
-    function getUserCapInWei(address user) public view returns(uint);
-    function getUserCapInTokenWei(address user, ERC20 token) public view returns(uint);
-    function enabled() public view returns(bool);
-    function info(bytes32 id) public view returns(uint);
+    function maxGasPrice() external view returns(uint);
+    function getUserCapInWei(address user) external view returns(uint);
+    function getUserCapInTokenWei(address user, ERC20 token) external view returns(uint);
+    function enabled() external view returns(bool);
+    function info(bytes32 id) external view returns(uint);
 
-    function swapTokenToToken(ERC20 src, uint srcAmount, ERC20 dest, uint minConversionRate) public returns(uint);
-    function swapEtherToToken(ERC20 token, uint minConversionRate) public payable returns(uint);
-    function swapTokenToEther(ERC20 token, uint srcAmount, uint minConversionRate) public returns(uint);
+    function swapTokenToToken(ERC20 src, uint srcAmount, ERC20 dest, uint minConversionRate) external returns(uint);
+    function swapEtherToToken(ERC20 token, uint minConversionRate) external payable returns(uint);
+    function swapTokenToEther(ERC20 token, uint srcAmount, uint minConversionRate) external returns(uint);
 
     function getExpectedRate
     (
@@ -20,7 +20,7 @@ interface KyberNetworkProxy {
         ERC20 dest, 
         uint srcQty
     ) 
-        public
+        external
         view
         returns 
     (
@@ -39,7 +39,7 @@ interface KyberNetworkProxy {
         address walletId,
         bytes hint
     )
-        public 
+        external 
         payable 
         returns(uint);
         

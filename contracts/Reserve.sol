@@ -108,7 +108,7 @@ contract Reserve is DSStop, DSThing, Utils, Utils2, ErrorUtils {
     mapping (uint => mapping(address => uint)) public reserves;
     mapping (address => uint) public lastReserveRuns;
 
-    mapping (address => mapping(address => uint)) surplus;
+    mapping (address => mapping(address => uint)) public surplus;
 
     mapping (bytes32 => CumulativeRun) public orderToCumulative;
 

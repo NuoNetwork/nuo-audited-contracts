@@ -9,7 +9,7 @@ contract MockExchangeConnector is ExchangeConnector {
     uint constant PRECISION = 10 ** 18;
 
     function setPairRate(ERC20 src, ERC20 dest, uint rate) public {
-        pairRate[keccak256(src, dest)] = rate;
+        pairRate[keccak256(abi.encodePacked(src, dest))] = rate;
     }
 
     function tradeWithInputFixed
@@ -22,7 +22,7 @@ contract MockExchangeConnector is ExchangeConnector {
         public    
         returns (uint _destTokenValue, uint _srcTokenValueLeft)
     {
-        uint rate = pairRate[keccak256(_srcToken, _destToken)];
+        uint rate = pairRate[keccak256(abi.encodePacked(_srcToken, _destToken))];
         _destTokenValue = _srcTokenValue * rate / PRECISION;
 
         _escrow.transfer(_srcToken, this, _srcTokenValue);
@@ -42,7 +42,7 @@ contract MockExchangeConnector is ExchangeConnector {
         public
         returns (uint _destTokenValue, uint _srcTokenValueLeft)
     {   
-        uint rate = pairRate[keccak256(_srcToken, _destToken)];
+        uint rate = pairRate[keccak256(abi.encodePacked(_srcToken, _destToken))];
 
         uint destAmount = _srcTokenValue * rate / PRECISION;
         uint actualSrcAmount = _srcTokenValue;
@@ -66,7 +66,7 @@ contract MockExchangeConnector is ExchangeConnector {
     {
         _srcTokenValue;
 
-        _expectedRate = pairRate[keccak256(_srcToken, _destToken)];
+        _expectedRate = pairRate[keccak256(abi.encodePacked(_srcToken, _destToken))];
         _slippageRate = _expectedRate * 97 / 100;
     }
 

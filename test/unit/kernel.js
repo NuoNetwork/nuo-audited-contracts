@@ -80,8 +80,8 @@ contract("Kernel", (accounts) => {
 
         dataForCall.push(result.sign);
 
-        await kernel.createOrder(...dataForCall);
-
+        let tx = await kernel.createOrder(...dataForCall);
+        
         let finalAccLoanBal = await omg.balanceOf(account.address);
         let finalKernelEscrowCollBal = await bat.balanceOf(kernelEscrow.address);
         
@@ -91,6 +91,26 @@ contract("Kernel", (accounts) => {
         assert.isTrue(await kernel.isOrder(result.hash), "order not available");
         assert.isTrue(diffAccLoanBal.eq(loanValue), "loan erc20 transfer to account failed");
         assert.isTrue(diffKernelEscrowCollBal.eq(collValue), "coll erc20 transfer to kernel escrow failed");
+        assert.equal((await kernel.getExpectedRepayValue(result.hash)).toNumber(), web3.toWei(1.08, "ether"), "invalid repayment value");
+        
+        let order = await kernel.getOrder(result.hash);
+        assert.equal(order[0], account.address);
+        assert.equal(order[1], acc1);
+        assert.equal(order[2], omg.address);
+        assert.equal(order[3], bat.address);
+        assert.equal(order[4], loanValue);
+        assert.equal(order[5], collValue);
+        assert.equal(order[6], premium);
+        assert.equal(order[7].toNumber(), tx.logs[0].args.expirationTimestamp.toNumber());
+        assert.equal(order[8], salt);
+        assert.equal(order[9], 0);
+
+        let allOrders = await kernel.getAllOrders();
+        assert.equal(allOrders[0], result.hash);
+
+        let allOrdersForAccount = await kernel.getOrdersForAccount(account.address);
+        assert.equal(allOrdersForAccount[0], result.hash);
+        assert.equal(allOrdersForAccount.length, 1);
     });
     
     it("should repay loan order", async() => {

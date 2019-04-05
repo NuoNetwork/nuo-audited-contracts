@@ -12,8 +12,6 @@ import "./Utils.sol";
  * @author Rohit Soni (rohit@nuofox.com)
  */
 
-// TODO: should disable account?
-
 contract AccountFactoryV2 is DSStop, Utils {
     Config public config;
     mapping (address => bool) public isAccountValid;
@@ -21,7 +19,7 @@ contract AccountFactoryV2 is DSStop, Utils {
     address[] public accounts;
 
     address public accountMaster;
-    AccountFactory accountFactoryV1;
+    AccountFactory public accountFactoryV1;
 
     constructor
     (
