@@ -12,9 +12,6 @@ import "./Utils.sol";
 import "./Utils2.sol";
 import "./ErrorUtils.sol";
 
-// TODO: handling decimals and rounding factors
-// TODO: check for reentrancy vulnerability
-// TODO: add contract address to hash
 
 /**
  * @author Rohit Soni (rohit@nuofox.com)
@@ -342,23 +339,7 @@ contract Kernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
         isDefaulted[_orderHash] = isDefault;
 
         if(isDefault) {
-            if (!kyberConnector.isTradeFeasible(
-                    ERC20(order.collateralToken), 
-                    ERC20(order.principalToken),
-                    order.collateralAmount)
-                )
-            {
-                reserve.lockSurplus(
-                    escrow,
-                    order.principalToken,
-                    order.collateralToken,
-                    order.collateralAmount
-                );
-                
-            } else {
-                _performLiquidation(order);
-            }
-            
+            _performLiquidation(order);
             emit LogOrderDefaulted(order.orderHash, reason);
         }
 

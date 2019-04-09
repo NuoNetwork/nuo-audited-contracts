@@ -119,12 +119,6 @@ contract MKernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
         uint fee
     );
 
-    event LogOrderDefaultWithSurplus(
-        bytes32 indexed orderHash,
-        address forToken,
-        address token
-    );
-
     struct Order {
         address account;
         address byUser;
@@ -440,8 +434,6 @@ contract MKernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
             emit LogErrorWithHintBytes32(_orderHash, "MKernel::processTradeForStopProfit", "INSUFFICIENT_COLLATERAL_BALANCE_IN_ESCROW");
             return;
         }
-
-        
         
         if(_isPositionAboveStopProfit(order, _tokenPrices, _bufferInPrincipal)) {
             isLiquidated[order.orderHash] = true;
@@ -469,14 +461,7 @@ contract MKernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
         uint orderFee = 0;
         
 
-        if (!_isTradeFeasible(_order, _order.trade.tradeToken, _order.principalToken, tradeAmount))
-        {
-            reserve.lockSurplus(escrow, _order.principalToken, _order.trade.tradeToken, tradeAmount);
-            reserve.lockSurplus(escrow, _order.principalToken, _order.collateralToken, _order.collateralAmount);
-
-            emit LogOrderDefaultWithSurplus(_order.orderHash, _order.principalToken, _order.trade.tradeToken);
-            emit LogOrderDefaultWithSurplus(_order.orderHash, _order.principalToken, _order.collateralToken);
-        } else {
+        
             (principalFromTrade,) = _tradeWithFixedInput(_order, _order.trade.tradeToken, _order.principalToken, tradeAmount);
 
             if(principalFromTrade >= valueToRepayWithFee) {
@@ -495,15 +480,7 @@ contract MKernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
                     }
 
                 } else {
-                    if(!_isTradeFeasible(_order, _order.collateralToken, _order.principalToken, _order.collateralAmount))
-                    {
-                        reserve.lockSurplus(escrow, _order.principalToken, _order.collateralToken, _order.collateralAmount);
-                        emit LogOrderDefaultWithSurplus(_order.orderHash, _order.principalToken, _order.collateralToken);
-                        _performSettlementAfterAllPossibleLiquidations(_order, principalFromTrade);
-                        return;
-                    } else {
-                        (principalFromCollateral, collateralLeft) = _tradeWithFixedOutput(_order, _order.collateralToken, _order.principalToken, _order.collateralAmount, principalNeededFromCollateral);
-                    }
+                    (principalFromCollateral, collateralLeft) = _tradeWithFixedOutput(_order, _order.collateralToken, _order.principalToken, _order.collateralAmount, principalNeededFromCollateral);    
                 }
 
                 if(principalFromCollateral >= principalNeededFromCollateral) {
@@ -514,7 +491,7 @@ contract MKernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
                     _performSettlementAfterAllPossibleLiquidations(_order, totalPrincipalAcquired);
                 }
             }
-        }               
+                       
     }
 
     function _tradeWithFixedInput(Order _order, address _srcToken, address _destToken, uint _srcTokenValue)
@@ -624,7 +601,7 @@ contract MKernel is DSStop, DSThing, Utils, Utils2, ErrorUtils {
         uint totalTradeValueInPrincipal = div(mul(tradeAmount, principalPerTrade), WAD);
 
         uint bufferValue = div(mul(_order.principalAmount, _bufferInPrincipal), WAD);
-        uint minValueReq = mul(div(sub(WAD, _order.trade.stopLoss), WAD), totalCollateralValueInPrincipal);
+        uint minValueReq = div(mul(_order.trade.stopLoss, totalCollateralValueInPrincipal), WAD);
 
         if(add(valueToRepayWithFee, bufferValue) >= totalTradeValueInPrincipal && 
             sub(add(valueToRepayWithFee, bufferValue), totalTradeValueInPrincipal) >= minValueReq) 

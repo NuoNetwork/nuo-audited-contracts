@@ -423,7 +423,7 @@ contract("MKernel", (accounts) => {
         assert.isFalse(await kernel.isDefaulted(orderHash), "order already defaulted");
         
         // prepping exchange connector
-        let stopLossLoanToTradeRate = web3.toWei(0.5, "ether");
+        let stopLossLoanToTradeRate = web3.toWei(0.45, "ether");
         let stopLossLoanToCollRate = web3.toWei(1, "ether"); 
 
         await exchangeConnector.setPairRate(tradeToken.address, loanToken.address, stopLossLoanToTradeRate); 
@@ -441,7 +441,7 @@ contract("MKernel", (accounts) => {
         assert.isTrue(tx.logs[0].args.userProfit == 0, "invalid user profit");
         assert.isTrue(tx.logs[0].args.valueRepaid == web3.toWei(1.08, "ether"), "invalid value repaid");
         assert.isTrue(tx.logs[0].args.reserveProfit == web3.toWei(0.08, "ether"), "invalid reserve profit");
-        assert.isTrue(tx.logs[0].args.collateralLeft == web3.toWei(0.42, "ether"), "invalid collateral left");
+        assert.isTrue(tx.logs[0].args.collateralLeft == web3.toWei(0.32, "ether"), "invalid collateral left");
         
         assert.isTrue(tx.logs[1].event == "LogOrderDefaulted", "event not found");
         assert.isTrue(tx.logs[1].args.reason == "MKERNEL_ORDER_UNSAFE", "invalid reason");
