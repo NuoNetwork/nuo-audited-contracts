@@ -162,7 +162,7 @@ contract UniswapConnector is ExchangeConnector, DSThing, Utils {
             _srcTokenValue
         );
 
-        return slippageRate == 0 ? false : true;
+        return slippageRate != 0;
     }
     
     function _isExchangeAvailable(address _token)
