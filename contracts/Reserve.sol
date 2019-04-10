@@ -361,6 +361,11 @@ contract Reserve is DSStop, DSThing, Utils, Utils2, ErrorUtils {
         emit LogLock(_token, _from, _value, _profit, _loss, msg.sender);
     }
 
+    // NO LONGER SHOULD BE USED
+    // This is a legacy method used by version 1 of the mkernel and kernel contracts. 
+    // As the liquidity is pooled and calculations are performed accordingly, we kept the reserve as is while deploying version 2 of the kernel contracts. 
+    // This method should no longer be needed when the all the orders in the original mkernels/kernels expire and/or become processed.
+
     // to lock collateral if cannot be liquidated e.g. not enough reserves in kyber
     function lockSurplus(address _from, address _forToken, address _token, uint _value) 
         external
