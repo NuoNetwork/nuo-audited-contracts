@@ -1,4 +1,4 @@
-# Nuo Network (Zeus) - contracts v2
+# Nuo Network (Zeus) - contracts
 
 ![](https://s3.ap-south-1.amazonaws.com/nuo-public/nuo_app/public/nuo_lend_home.png)
 
